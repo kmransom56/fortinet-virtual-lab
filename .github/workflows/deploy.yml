@@ -1,0 +1,76 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+  release:
+    types: [published]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up kubectl
+      uses: azure/k8s-set-context@v3
+      with:
+        kubeconfig: ${{ secrets.KUBECONFIG }}
+    
+    - name: Set deployment environment
+      id: env
+      run: |
+        if [[ "${{ github.event.inputs.environment }}" == "production" || "${{ github.event_name }}" == "release" ]]; then
+          echo "DEPLOY_ENV=production" >> $GITHUB_ENV
+          echo "DEPLOY_PATH=./kubernetes/production" >> $GITHUB_ENV
+        else
+          echo "DEPLOY_ENV=staging" >> $GITHUB_ENV
+          echo "DEPLOY_PATH=./kubernetes/staging" >> $GITHUB_ENV
+        fi
+    
+    - name: Deploy to Kubernetes
+      run: |
+        echo "Deploying to ${{ env.DEPLOY_ENV }} environment"
+        kubectl apply -f ${{ env.DEPLOY_PATH }}/
+    
+    - name: Verify deployment
+      run: |
+        echo "Verifying deployment..."
+        kubectl get pods -n fortinet-lab-${{ env.DEPLOY_ENV }}
+        
+        # Wait for deployments to be ready
+        kubectl wait --for=condition=available --timeout=300s deployment/fortinet-lab-ui -n fortinet-lab-${{ env.DEPLOY_ENV }}
+        kubectl wait --for=condition=available --timeout=300s deployment/fortinet-lab-api-gateway -n fortinet-lab-${{ env.DEPLOY_ENV }}
+        kubectl wait --for=condition=available --timeout=300s deployment/fortinet-lab-fortiswitch -n fortinet-lab-${{ env.DEPLOY_ENV }}
+        kubectl wait --for=condition=available --timeout=300s deployment/fortinet-lab-fortiap -n fortinet-lab-${{ env.DEPLOY_ENV }}
+        kubectl wait --for=condition=available --timeout=300s deployment/fortinet-lab-meraki -n fortinet-lab-${{ env.DEPLOY_ENV }}
+    
+    - name: Get service URL
+      run: |
+        echo "Service available at:"
+        kubectl get ingress -n fortinet-lab-${{ env.DEPLOY_ENV }} -o jsonpath='{.items[0].spec.rules[0].host}'
+    
+    - name: Notify deployment status
+      if: always()
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const status = "${{ job.status }}" === "success" ? "✅ Successful" : "❌ Failed";
+          const environment = "${{ env.DEPLOY_ENV }}";
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `Deployment to ${environment} environment: ${status}`
+          })
