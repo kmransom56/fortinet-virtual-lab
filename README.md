@@ -1,135 +1,150 @@
-# Fortinet Virtual Lab Environment
+# Fortinet Virtual Lab
 
-A complete virtual lab environment that mirrors the network infrastructure for Arby's, Buffalo Wild Wings, and Sonic brands, featuring Fortinet security products and Meraki networking equipment.
-
-![Fortinet Virtual Lab](https://via.placeholder.com/800x400?text=Fortinet+Virtual+Lab)
+[![Build Status](https://img.shields.io/github/workflow/status/kmransom56/fortinet-virtual-lab/build-and-test)](https://github.com/kmransom56/fortinet-virtual-lab/actions)
+[![License](https://img.shields.io/github/license/kmransom56/fortinet-virtual-lab)](LICENSE)
 
 ## Overview
 
-This project creates a comprehensive virtual lab environment that simulates the complete network infrastructure for three restaurant brands - Arby's, Buffalo Wild Wings, and Sonic. The lab environment includes virtualized FortiGate firewalls, FortiManager centralized management, FortiAnalyzer logging, and virtualized network devices including FortiSwitches, FortiAPs, and Meraki switches.
+The Fortinet Virtual Lab is a comprehensive simulation environment that creates a virtual mirror of Fortinet network infrastructure for three restaurant brands: Arby's, Buffalo Wild Wings, and Sonic. It combines Docker-based device simulators with EVE-NG virtual machines to provide a complete testing and training environment.
 
-The entire environment is containerized and easily deployable, designed specifically for non-technical users to spin up a realistic network environment without deep knowledge of Docker, virtualization, or networking.
+![Fortinet Virtual Lab Architecture](docs/images/architecture-diagram.png)
 
 ## Features
 
-- **Brand-Specific Network Environments**
-  - Arby's: FortiGate firewalls, Meraki switches, FortiAPs
-  - Buffalo Wild Wings: FortiGate firewalls, Meraki switches, FortiAPs
-  - Sonic: FortiGate firewalls, FortiSwitches, FortiAPs
+- **Multi-brand Virtual Network**: Simulate distinct network topologies for Arby's, Buffalo Wild Wings, and Sonic
+- **Fortinet Device Simulation**: Virtual FortiGate, FortiManager, FortiAnalyzer, FortiSwitch, and FortiAP
+- **Meraki Integration**: Simulate Meraki switches used in Arby's and Buffalo Wild Wings locations
+- **EVE-NG Integration**: Run actual FortiGate VMs within EVE-NG platform
+- **Centralized Management**: Web UI for controlling all lab components
+- **API Access**: RESTful APIs for all simulated devices
+- **Containerized Architecture**: Easy deployment with Docker Compose
 
-- **Management Infrastructure**
-  - FortiManager for each brand
-  - Shared FortiAnalyzer for logging
-  - Web-based management portal
+## Prerequisites
 
-- **Simulators for Network Devices**
-  - FortiSwitch simulator with realistic API responses
-  - FortiAP simulator with configurable behavior
-  - Meraki switch simulator with dashboard API
-
-- **Automation and Ease of Use**
-  - Docker containerization for easy deployment
-  - One-click brand environment activation
-  - Pre-configured network topologies
-  - Automated VM image download from Fortinet and Cisco portals
-
-## System Architecture
-
-The system is built using the following technologies:
-
-- **EVE-NG Professional** - Core virtualization platform for Fortinet VMs
-- **Docker** and **Kubernetes** - Container platforms for simulators and web UI
-- **Node.js** - Backend for API simulators
-- **React.js** - Frontend for web management interface
-
-## Getting Started
-
-### Prerequisites
-
-- Server with minimum 32GB RAM, 8+ CPU cores, 500GB storage
-- Virtualization support (Intel VT-x/AMD-V)
 - Docker and Docker Compose
-- Kubernetes cluster (for production deployment)
-- Access to Fortinet Developer Network and Cisco DevNet (for VM images)
+- Access to an EVE-NG server with FortiGate VM images
+- Network connectivity to the EVE-NG server
+- Basic understanding of Fortinet products
 
-### Step 1: Download VM Images
+## Quick Start
 
-Download the required virtual machine images from Fortinet and Cisco:
+1. Clone this repository:
 
 ```bash
-./scripts/download-images.sh
+git clone https://github.com/kmransom56/fortinet-virtual-lab.git
+cd fortinet-virtual-lab
 ```
 
-This script will prompt for your Fortinet Developer Network and Cisco DevNet credentials to download the VM images necessary for the lab environment. See [EVE-NG Import Guide](docs/eve-ng-import.md) for instructions on importing these images into EVE-NG.
-
-### Step 2: Configure Environment
+2. Configure your environment:
 
 ```bash
 cp .env.example .env
-# Edit .env file to customize settings
+# Edit .env with your specific settings
+vim .env
 ```
 
-### Step 3: Start the Environment
+3. Start the lab environment:
 
 ```bash
+chmod +x scripts/start-lab.sh
 ./scripts/start-lab.sh
 ```
 
-### Step 4: Access the Web Interface
+4. Access the web UI at http://localhost
 
-Access the web management interface at http://localhost:8080
-
-### Production Deployment with Kubernetes
-
-For production environments, we recommend using Kubernetes:
-
-1. Configure your Kubernetes context:
+5. To stop the lab:
 
 ```bash
-kubectl config use-context your-cluster-context
+chmod +x scripts/stop-lab.sh
+./scripts/stop-lab.sh
 ```
 
-2. Deploy the application:
+## Components
 
-```bash
-kubectl apply -f kubernetes/production/
+### Network Topology
+
+The lab simulates three distinct network topologies:
+
+- **Arby's**: FortiGate + Meraki Switches + FortiAP
+- **Buffalo Wild Wings**: FortiGate + Meraki Switches + FortiAP
+- **Sonic**: FortiGate + FortiSwitch + FortiAP
+
+All brands share a common FortiManager and FortiAnalyzer for centralized management and logging.
+
+### Docker Containers
+
+- **fortiswitch-simulator**: API simulator for FortiSwitch devices
+- **fortiap-simulator**: API simulator for FortiAP wireless access points
+- **meraki-simulator**: API simulator for Cisco Meraki switches
+- **fortimanager-simulator**: API simulator for FortiManager
+- **fortianalyzer-simulator**: API simulator for FortiAnalyzer
+- **eve-ng-proxy**: API bridge to EVE-NG platform
+- **lab-ui**: Web interface for managing the lab
+
+### EVE-NG Virtual Machines
+
+- **FortiGate-Arbys**: FortiGate VM for Arby's network
+- **FortiGate-BWW**: FortiGate VM for Buffalo Wild Wings network
+- **FortiGate-Sonic**: FortiGate VM for Sonic network
+- **FortiManager**: Central management VM
+- **FortiAnalyzer**: Logging and analytics VM
+
+## Configuration
+
+### Environment Variables
+
+Key configuration settings in `.env` file:
+
+- EVE-NG connection parameters
+- API credentials for all devices
+- Path to EVE-NG lab files
+- Web UI authentication
+
+### Custom Configurations
+
+To customize the lab for your specific needs:
+
+1. Modify EVE-NG topology files in `/eve-ng-topology/`
+2. Edit device configurations in `/configs/`
+3. Update simulator behavior by modifying the server.js files
+
+## API Access
+
+All simulated devices expose RESTful APIs:
+
+- FortiSwitch: http://localhost:3001/api
+- FortiAP: http://localhost:3002/api
+- Meraki: http://localhost:3003/api
+- FortiManager: http://localhost:3004/api
+- FortiAnalyzer: http://localhost:3005/api
+- EVE-NG Proxy: http://localhost:3010/api
+
+## Development
+
+### Project Structure
+
+```
+├── api-proxy/           # EVE-NG API proxy
+├── configs/             # Device configuration templates
+├── docs/                # Documentation
+├── eve-ng-topology/     # EVE-NG topology files
+├── kubernetes/          # Kubernetes deployment files
+├── scripts/             # Utility scripts
+├── simulators/          # Device simulators
+│   ├── fortiap/
+│   ├── fortianalyzer/
+│   ├── fortimanager/
+│   ├── fortiswitch/
+│   └── meraki/
+├── ui/                  # Web UI
+├── .env.example         # Environment variables template
+├── docker-compose.yml   # Docker Compose configuration
+└── README.md            # This file
 ```
 
-3. Access the application using the configured Ingress host.
+### Contributing
 
-## Project Structure
-
-```
-/fortinet-virtual-lab/
-├── README.md                   # Project overview
-├── docker-compose.yml          # Container orchestration
-├── .github/                    # GitHub workflows for CI/CD
-├── configs/                    # Configuration templates
-│   └── fortigate-sample.conf   # FortiGate configuration
-├── docs/                       # Documentation
-│   ├── architecture.md         # Architecture diagrams
-│   └── eve-ng-import.md        # VM image import guide
-├── eve-ng-topology/            # EVE-NG network topologies
-│   ├── arbys.unl               # Arby's network
-│   ├── bww.unl                 # Buffalo Wild Wings network
-│   └── sonic.unl               # Sonic network
-├── kubernetes/                 # Kubernetes manifests
-│   ├── staging/                # Staging environment
-│   └── production/             # Production environment
-├── scripts/                    # Management scripts
-│   ├── start-lab.sh            # Lab startup script
-│   ├── stop-lab.sh             # Lab shutdown script
-│   └── download-images.sh      # VM image downloader
-├── simulators/                 # API simulators
-│   ├── fortiswitch/            # FortiSwitch simulator
-│   ├── fortiap/                # FortiAP simulator
-│   └── meraki/                 # Meraki switches simulator
-└── ui/                         # Web management interface
-```
-
-## Contributing
-
-We welcome contributions to the Fortinet Virtual Lab project! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute.
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## License
 
@@ -137,10 +152,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- Fortinet for their virtual appliance documentation
+- Fortinet for their API documentation
 - Cisco Meraki for their API documentation
 - EVE-NG for the network emulation platform
-
-## Support
-
-For support, please open an issue on the GitHub repository or contact the maintainers directly.
