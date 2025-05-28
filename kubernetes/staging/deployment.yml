@@ -1,0 +1,277 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fortinet-lab-staging
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortinet-lab-ui
+  namespace: fortinet-lab-staging
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fortinet-lab-ui
+  template:
+    metadata:
+      labels:
+        app: fortinet-lab-ui
+    spec:
+      containers:
+      - name: ui
+        image: kmransom56/fortinet-lab-ui:latest
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortinet-lab-api-gateway
+  namespace: fortinet-lab-staging
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fortinet-lab-api-gateway
+  template:
+    metadata:
+      labels:
+        app: fortinet-lab-api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: kmransom56/fortinet-lab-api-gateway:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: FORTISWITCH_API_URL
+          value: "http://fortinet-lab-fortiswitch:8080"
+        - name: FORTIAP_API_URL
+          value: "http://fortinet-lab-fortiap:8080"
+        - name: MERAKI_API_URL
+          value: "http://fortinet-lab-meraki:8080"
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortinet-lab-fortiswitch
+  namespace: fortinet-lab-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fortinet-lab-fortiswitch
+  template:
+    metadata:
+      labels:
+        app: fortinet-lab-fortiswitch
+    spec:
+      containers:
+      - name: fortiswitch
+        image: kmransom56/fortinet-lab-fortiswitch:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: DEVICE_COUNT
+          value: "5"
+        - name: BRAND
+          value: "sonic"
+        resources:
+          limits:
+            cpu: "300m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortinet-lab-fortiap
+  namespace: fortinet-lab-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fortinet-lab-fortiap
+  template:
+    metadata:
+      labels:
+        app: fortinet-lab-fortiap
+    spec:
+      containers:
+      - name: fortiap
+        image: kmransom56/fortinet-lab-fortiap:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: DEVICE_COUNT
+          value: "10"
+        - name: BRANDS
+          value: "arbys,bww,sonic"
+        resources:
+          limits:
+            cpu: "300m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortinet-lab-meraki
+  namespace: fortinet-lab-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fortinet-lab-meraki
+  template:
+    metadata:
+      labels:
+        app: fortinet-lab-meraki
+    spec:
+      containers:
+      - name: meraki
+        image: kmransom56/fortinet-lab-meraki:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: DEVICE_COUNT
+          value: "5"
+        - name: BRANDS
+          value: "arbys,bww"
+        resources:
+          limits:
+            cpu: "300m"
+            memory: "256Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fortinet-lab-ui
+  namespace: fortinet-lab-staging
+spec:
+  selector:
+    app: fortinet-lab-ui
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fortinet-lab-api-gateway
+  namespace: fortinet-lab-staging
+spec:
+  selector:
+    app: fortinet-lab-api-gateway
+  ports:
+  - port: 8000
+    targetPort: 8000
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fortinet-lab-fortiswitch
+  namespace: fortinet-lab-staging
+spec:
+  selector:
+    app: fortinet-lab-fortiswitch
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fortinet-lab-fortiap
+  namespace: fortinet-lab-staging
+spec:
+  selector:
+    app: fortinet-lab-fortiap
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fortinet-lab-meraki
+  namespace: fortinet-lab-staging
+spec:
+  selector:
+    app: fortinet-lab-meraki
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fortinet-lab-ingress
+  namespace: fortinet-lab-staging
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  rules:
+  - host: fortinet-lab-staging.example.com
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: fortinet-lab-api-gateway
+            port:
+              number: 8000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: fortinet-lab-ui
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - fortinet-lab-staging.example.com
+    secretName: fortinet-lab-tls-staging
