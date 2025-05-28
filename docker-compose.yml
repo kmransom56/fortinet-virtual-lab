@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  # Web Management UI
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      - API_GATEWAY_URL=http://api-gateway:3000
+      - NODE_ENV=production
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+    networks:
+      - fortinet-lab
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - FORTISWITCH_URL=http://fortiswitch-simulator:3001
+      - FORTIAP_URL=http://fortiap-simulator:3002
+      - MERAKI_URL=http://meraki-simulator:3003
+      - EVE_NG_URL=${EVE_NG_URL}
+      - EVE_NG_USERNAME=${EVE_NG_USERNAME}
+      - EVE_NG_PASSWORD=${EVE_NG_PASSWORD}
+    volumes:
+      - api-gateway-data:/app/data
+    restart: unless-stopped
+    networks:
+      - fortinet-lab
+
+  # FortiSwitch Simulator
+  fortiswitch-simulator:
+    build:
+      context: ./simulators/fortiswitch
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - SIMULATION_MODE=${SIMULATION_MODE:-realistic}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - fortiswitch-data:/app/data
+    restart: unless-stopped
+    networks:
+      - fortinet-lab
+
+  # FortiAP Simulator
+  fortiap-simulator:
+    build:
+      context: ./simulators/fortiap
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - SIMULATION_MODE=${SIMULATION_MODE:-realistic}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - fortiap-data:/app/data
+    restart: unless-stopped
+    networks:
+      - fortinet-lab
+
+  # Meraki Simulator
+  meraki-simulator:
+    build:
+      context: ./simulators/meraki
+      dockerfile: Dockerfile
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=production
+      - SIMULATION_MODE=${SIMULATION_MODE:-realistic}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - meraki-data:/app/data
+    restart: unless-stopped
+    networks:
+      - fortinet-lab
+
+  # EVE-NG Connector
+  eve-ng-connector:
+    build:
+      context: ./eve-ng-connector
+      dockerfile: Dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=production
+      - EVE_NG_URL=${EVE_NG_URL}
+      - EVE_NG_USERNAME=${EVE_NG_USERNAME}
+      - EVE_NG_PASSWORD=${EVE_NG_PASSWORD}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - eve-ng-connector-data:/app/data
+    restart: unless-stopped
+    networks:
+      - fortinet-lab
+
+  # Database for storing configurations and state
+  database:
+    image: mongo:4.4
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${DB_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - database-data:/data/db
+    restart: unless-stopped
+    networks:
+      - fortinet-lab
+
+networks:
+  fortinet-lab:
+    driver: bridge
+
+volumes:
+  api-gateway-data:
+  fortiswitch-data:
+  fortiap-data:
+  meraki-data:
+  eve-ng-connector-data:
+  database-data:
