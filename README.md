@@ -31,6 +31,7 @@ The entire environment is containerized and easily deployable, designed specific
   - Docker containerization for easy deployment
   - One-click brand environment activation
   - Pre-configured network topologies
+  - Automated VM image download from Fortinet and Cisco portals
 
 ## System Architecture
 
@@ -49,31 +50,34 @@ The system is built using the following technologies:
 - Virtualization support (Intel VT-x/AMD-V)
 - Docker and Docker Compose
 - Kubernetes cluster (for production deployment)
-- FortiGate, FortiManager, and FortiAnalyzer VM images
+- Access to Fortinet Developer Network and Cisco DevNet (for VM images)
 
-### Quick Start with Docker Compose
+### Step 1: Download VM Images
 
-1. Clone this repository:
+Download the required virtual machine images from Fortinet and Cisco:
 
 ```bash
-git clone https://github.com/kmransom56/fortinet-virtual-lab.git
-cd fortinet-virtual-lab
+./scripts/download-images.sh
 ```
 
-2. Configure environment variables (optional):
+This script will prompt for your Fortinet Developer Network and Cisco DevNet credentials to download the VM images necessary for the lab environment. See [EVE-NG Import Guide](docs/eve-ng-import.md) for instructions on importing these images into EVE-NG.
+
+### Step 2: Configure Environment
 
 ```bash
 cp .env.example .env
 # Edit .env file to customize settings
 ```
 
-3. Start the environment:
+### Step 3: Start the Environment
 
 ```bash
 ./scripts/start-lab.sh
 ```
 
-4. Access the web management interface at http://localhost:8080
+### Step 4: Access the Web Interface
+
+Access the web management interface at http://localhost:8080
 
 ### Production Deployment with Kubernetes
 
@@ -103,7 +107,8 @@ kubectl apply -f kubernetes/production/
 ├── configs/                    # Configuration templates
 │   └── fortigate-sample.conf   # FortiGate configuration
 ├── docs/                       # Documentation
-│   └── architecture.md         # Architecture diagrams
+│   ├── architecture.md         # Architecture diagrams
+│   └── eve-ng-import.md        # VM image import guide
 ├── eve-ng-topology/            # EVE-NG network topologies
 │   ├── arbys.unl               # Arby's network
 │   ├── bww.unl                 # Buffalo Wild Wings network
@@ -113,7 +118,8 @@ kubectl apply -f kubernetes/production/
 │   └── production/             # Production environment
 ├── scripts/                    # Management scripts
 │   ├── start-lab.sh            # Lab startup script
-│   └── stop-lab.sh             # Lab shutdown script
+│   ├── stop-lab.sh             # Lab shutdown script
+│   └── download-images.sh      # VM image downloader
 ├── simulators/                 # API simulators
 │   ├── fortiswitch/            # FortiSwitch simulator
 │   ├── fortiap/                # FortiAP simulator
