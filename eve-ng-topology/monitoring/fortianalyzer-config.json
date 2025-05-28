@@ -1,0 +1,150 @@
+{
+  "system": {
+    "global": {
+      "hostname": "FAZ-VM",
+      "timezone": 4,
+      "gui-theme": "mariner",
+      "admintimeout": 60,
+      "admin-ssh-port": 22,
+      "admin-https-ssl-versions": ["tls1-2", "tls1-3"]
+    },
+    "admin": {
+      "users": [
+        {
+          "id": 1,
+          "name": "admin",
+          "password": "ENC [hashed-password]",
+          "trusthost1": "10.0.0.0 255.255.255.0",
+          "accprofile": "super_admin"
+        }
+      ]
+    },
+    "interface": [
+      {
+        "name": "port1",
+        "ip": "10.0.0.11 255.255.255.0",
+        "allowaccess": "ping https ssh http",
+        "description": "Management"
+      },
+      {
+        "name": "port2",
+        "ip": "192.168.10.11 255.255.255.0",
+        "description": "Arbys Network"
+      },
+      {
+        "name": "port3",
+        "ip": "192.168.20.11 255.255.255.0",
+        "description": "BWW Network"
+      },
+      {
+        "name": "port4",
+        "ip": "192.168.30.11 255.255.255.0",
+        "description": "Sonic Network"
+      }
+    ],
+    "route": [
+      {
+        "id": 1,
+        "dst": "0.0.0.0 0.0.0.0",
+        "gateway": "10.0.0.1",
+        "device": "port1"
+      }
+    ]
+  },
+  "log": {
+    "settings": {
+      "fwpolicy-implicit-log": "enable",
+      "fwpolicy6-implicit-log": "enable"
+    },
+    "fortianalyzer": {
+      "status": "enable",
+      "server": "10.0.0.11",
+      "upload-option": "realtime"
+    }
+  },
+  "monitor": {
+    "devices": [
+      {
+        "name": "arbys-fgt",
+        "ip": "10.0.0.12",
+        "type": "fortigate",
+        "adom": "Arbys"
+      },
+      {
+        "name": "bww-fgt",
+        "ip": "10.0.0.13",
+        "type": "fortigate",
+        "adom": "BWW"
+      },
+      {
+        "name": "sonic-fgt",
+        "ip": "10.0.0.14",
+        "type": "fortigate",
+        "adom": "Sonic"
+      },
+      {
+        "name": "arbys-switch",
+        "ip": "192.168.10.100",
+        "type": "meraki",
+        "adom": "Arbys"
+      },
+      {
+        "name": "bww-switch",
+        "ip": "192.168.20.100",
+        "type": "meraki",
+        "adom": "BWW"
+      },
+      {
+        "name": "sonic-switch",
+        "ip": "192.168.30.100",
+        "type": "fortiswitch",
+        "adom": "Sonic"
+      }
+    ]
+  },
+  "reports": {
+    "scheduled": [
+      {
+        "name": "Daily Security Report",
+        "schedule": "daily",
+        "time": "08:00",
+        "recipients": ["admin@example.com"],
+        "format": "pdf",
+        "adom": "all"
+      },
+      {
+        "name": "Weekly Performance Report",
+        "schedule": "weekly",
+        "day": "monday",
+        "time": "09:00",
+        "recipients": ["admin@example.com"],
+        "format": "pdf",
+        "adom": "all"
+      }
+    ]
+  },
+  "alerts": {
+    "email": {
+      "server": "smtp.example.com",
+      "port": 587,
+      "username": "alerts@example.com",
+      "password": "your-smtp-password",
+      "sender": "fortianalyzer@example.com",
+      "use-tls": true
+    },
+    "notifications": [
+      {
+        "name": "Critical Alerts",
+        "severity": ["critical"],
+        "recipients": ["oncall@example.com"],
+        "enabled": true
+      },
+      {
+        "name": "All Alerts",
+        "severity": ["critical", "high", "medium", "low"],
+        "recipients": ["security-team@example.com"],
+        "enabled": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,297 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fortinet-lab-staging
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortinet-lab-ui
+  namespace: fortinet-lab-staging
+  labels:
+    app: fortinet-lab
+    component: ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fortinet-lab
+      component: ui
+  template:
+    metadata:
+      labels:
+        app: fortinet-lab
+        component: ui
+    spec:
+      containers:
+      - name: ui
+        image: ghcr.io/kmransom56/fortinet-lab-ui:latest
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "512Mi"
+          requests:
+            cpu: "0.2"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortinet-lab-fortiswitch
+  namespace: fortinet-lab-staging
+  labels:
+    app: fortinet-lab
+    component: fortiswitch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fortinet-lab
+      component: fortiswitch
+  template:
+    metadata:
+      labels:
+        app: fortinet-lab
+        component: fortiswitch
+    spec:
+      containers:
+      - name: fortiswitch
+        image: ghcr.io/kmransom56/fortinet-lab-fortiswitch:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DEVICE_COUNT
+          value: "5"
+        - name: BRAND
+          value: "sonic"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "512Mi"
+          requests:
+            cpu: "0.2"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortinet-lab-fortiap
+  namespace: fortinet-lab-staging
+  labels:
+    app: fortinet-lab
+    component: fortiap
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fortinet-lab
+      component: fortiap
+  template:
+    metadata:
+      labels:
+        app: fortinet-lab
+        component: fortiap
+    spec:
+      containers:
+      - name: fortiap
+        image: ghcr.io/kmransom56/fortinet-lab-fortiap:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DEVICE_COUNT
+          value: "10"
+        - name: BRANDS
+          value: "arbys,bww,sonic"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "512Mi"
+          requests:
+            cpu: "0.2"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortinet-lab-meraki
+  namespace: fortinet-lab-staging
+  labels:
+    app: fortinet-lab
+    component: meraki
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fortinet-lab
+      component: meraki
+  template:
+    metadata:
+      labels:
+        app: fortinet-lab
+        component: meraki
+    spec:
+      containers:
+      - name: meraki
+        image: ghcr.io/kmransom56/fortinet-lab-meraki:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DEVICE_COUNT
+          value: "5"
+        - name: BRANDS
+          value: "arbys,bww"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "512Mi"
+          requests:
+            cpu: "0.2"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fortinet-lab-ui
+  namespace: fortinet-lab-staging
+spec:
+  selector:
+    app: fortinet-lab
+    component: ui
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fortinet-lab-fortiswitch
+  namespace: fortinet-lab-staging
+spec:
+  selector:
+    app: fortinet-lab
+    component: fortiswitch
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fortinet-lab-fortiap
+  namespace: fortinet-lab-staging
+spec:
+  selector:
+    app: fortinet-lab
+    component: fortiap
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fortinet-lab-meraki
+  namespace: fortinet-lab-staging
+spec:
+  selector:
+    app: fortinet-lab
+    component: meraki
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fortinet-lab-ingress
+  namespace: fortinet-lab-staging
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  rules:
+  - host: staging.fortinet-lab.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: fortinet-lab-ui
+            port:
+              number: 80
+      - path: /api/fortiswitch
+        pathType: Prefix
+        backend:
+          service:
+            name: fortinet-lab-fortiswitch
+            port:
+              number: 8080
+      - path: /api/fortiap
+        pathType: Prefix
+        backend:
+          service:
+            name: fortinet-lab-fortiap
+            port:
+              number: 8080
+      - path: /api/meraki
+        pathType: Prefix
+        backend:
+          service:
+            name: fortinet-lab-meraki
+            port:
+              number: 8080

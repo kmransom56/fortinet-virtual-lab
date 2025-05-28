@@ -1,0 +1,26 @@
+{
+  "name": "meraki-simulator",
+  "version": "1.0.0",
+  "description": "Meraki API simulator for virtual lab environment",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2",
+    "morgan": "^1.10.0",
+    "winston": "^3.8.2",
+    "dotenv": "^16.0.3",
+    "swagger-ui-express": "^4.6.2",
+    "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22",
+    "jest": "^29.5.0",
+    "supertest": "^6.3.3"
+  }
+}

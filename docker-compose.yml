@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: fortinet-lab-ui
+    ports:
+      - "${UI_PORT:-8080}:80"
+    environment:
+      - API_GATEWAY_URL=http://api-gateway:8000
+      - NODE_ENV=production
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+    networks:
+      - fortinet-lab-network
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: fortinet-lab-api-gateway
+    ports:
+      - "${API_GATEWAY_PORT:-8000}:8000"
+    environment:
+      - NODE_ENV=production
+      - FORTISWITCH_API_URL=http://fortiswitch:8080
+      - FORTIAP_API_URL=http://fortiap:8080
+      - MERAKI_API_URL=http://meraki:8080
+      - EVE_NG_HOST=${EVE_NG_HOST:-192.168.0.10}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    depends_on:
+      - fortiswitch
+      - fortiap
+      - meraki
+    restart: unless-stopped
+    networks:
+      - fortinet-lab-network
+
+  fortiswitch:
+    build:
+      context: ./simulators/fortiswitch
+      dockerfile: Dockerfile
+    container_name: fortinet-lab-fortiswitch
+    ports:
+      - "8081:8080"
+    environment:
+      - DEVICE_COUNT=${FORTISWITCH_COUNT:-5}
+      - BRAND=${FORTISWITCH_BRAND:-sonic}
+      - NODE_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - fortiswitch-data:/app/logs
+      - ./simulators/fortiswitch/configs:/app/configs
+    restart: unless-stopped
+    networks:
+      - fortinet-lab-network
+
+  fortiap:
+    build:
+      context: ./simulators/fortiap
+      dockerfile: Dockerfile
+    container_name: fortinet-lab-fortiap
+    ports:
+      - "8082:8080"
+    environment:
+      - DEVICE_COUNT=${FORTIAP_COUNT:-10}
+      - BRANDS=${FORTIAP_BRANDS:-arbys,bww,sonic}
+      - NODE_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - fortiap-data:/app/logs
+      - ./simulators/fortiap/configs:/app/configs
+    restart: unless-stopped
+    networks:
+      - fortinet-lab-network
+
+  meraki:
+    build:
+      context: ./simulators/meraki
+      dockerfile: Dockerfile
+    container_name: fortinet-lab-meraki
+    ports:
+      - "8083:8080"
+    environment:
+      - DEVICE_COUNT=${MERAKI_COUNT:-5}
+      - BRANDS=${MERAKI_BRANDS:-arbys,bww}
+      - NODE_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - meraki-data:/app/logs
+      - ./simulators/meraki/configs:/app/configs
+    restart: unless-stopped
+    networks:
+      - fortinet-lab-network
+
+  # Eve-NG connectivity service (optional, enables direct API communication with EVE-NG)
+  eve-ng-connector:
+    build:
+      context: ./eve-ng-connector
+      dockerfile: Dockerfile
+    container_name: fortinet-lab-eve-ng-connector
+    environment:
+      - EVE_NG_HOST=${EVE_NG_HOST:-192.168.0.10}
+      - EVE_NG_USERNAME=${EVE_NG_USERNAME:-admin}
+      - EVE_NG_PASSWORD=${EVE_NG_PASSWORD:-eve}
+      - NODE_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    restart: unless-stopped
+    networks:
+      - fortinet-lab-network
+    depends_on:
+      - api-gateway
+
+volumes:
+  fortiswitch-data:
+  fortiap-data:
+  meraki-data:
+
+networks:
+  fortinet-lab-network:
+    driver: bridge

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<lab name="Arby's Virtual Environment" version="1" scripttimeout="300" lock="0" author="Fortinet Virtual Lab">
+  <description>Arby's brand virtual network environment with FortiGate, Meraki switches, and FortiAPs</description>
+  <topology>
+    <nodes>
+      <node id="1" name="Arbys-FortiGate" type="qemu" template="fortinet-fg" image="fortigate-v7.0" console="vnc" cpu="2" cpulimit="0" ram="4096" ethernet="8" uuid="ARB-FGT-01" firstmac="00:50:56:01:10:01" qemu_options="-machine type=pc,accel=kvm -serial mon:stdio -nographic -no-user-config -nodefaults -display none -vga std -rtc base=utc" qemu_version="4.1.0" qemu_arch="x86_64" qemu_nic="virtio-net-pci" delay="0" icon="FortiGate.png" config="1" left="600" top="300"/>
+      <node id="2" name="Arbys-FortiManager" type="qemu" template="fortinet-fmg" image="fortimanager-v7.0" console="vnc" cpu="2" cpulimit="0" ram="4096" ethernet="1" uuid="ARB-FMG-01" firstmac="00:50:56:01:20:01" qemu_options="-machine type=pc,accel=kvm -serial mon:stdio -nographic -no-user-config -nodefaults -display none -vga std -rtc base=utc" qemu_version="4.1.0" qemu_arch="x86_64" qemu_nic="virtio-net-pci" delay="0" icon="FortiManager.png" config="1" left="900" top="150"/>
+      <node id="3" name="FortiAnalyzer" type="qemu" template="fortinet-faz" image="fortianalyzer-v7.0" console="vnc" cpu="2" cpulimit="0" ram="4096" ethernet="1" uuid="SHARED-FAZ-01" firstmac="00:50:56:00:30:01" qemu_options="-machine type=pc,accel=kvm -serial mon:stdio -nographic -no-user-config -nodefaults -display none -vga std -rtc base=utc" qemu_version="4.1.0" qemu_arch="x86_64" qemu_nic="virtio-net-pci" delay="0" icon="FortiAnalyzer.png" config="1" left="1200" top="150"/>
+      <node id="4" name="Internet" type="docker" template="ubuntu" image="ubuntu:latest" console="vnc" cpu="1" cpulimit="0" ram="512" ethernet="1" uuid="INET-01" firstmac="00:50:56:00:40:01" docker_options="--privileged" delay="0" icon="Server.png" config="1" left="600" top="150"/>
+      <node id="5" name="API-Simulator" type="docker" template="ubuntu" image="node:18-alpine" console="vnc" cpu="1" cpulimit="0" ram="512" ethernet="1" uuid="API-SIM-01" firstmac="00:50:56:00:50:01" docker_options="" delay="0" icon="Server.png" config="1" left="300" top="300"/>
+    </nodes>
+    <networks>
+      <network id="1" type="bridge" name="Management" left="600" top="50" visibility="1"/>
+      <network id="2" type="bridge" name="Internet" left="600" top="100" visibility="1"/>
+      <network id="3" type="bridge" name="Arbys-Internal" left="300" top="150" visibility="1"/>
+      <network id="4" type="bridge" name="Arbys-DMZ" left="300" top="200" visibility="1"/>
+      <network id="5" type="bridge" name="Arbys-WiFi" left="300" top="250" visibility="1"/>
+    </networks>
+    <connections>
+      <connection id="1" type="ethernet" network="1" node="1" interface="0" lport="0" rport="0" />
+      <connection id="2" type="ethernet" network="1" node="2" interface="0" lport="0" rport="0" />
+      <connection id="3" type="ethernet" network="1" node="3" interface="0" lport="0" rport="0" />
+      <connection id="4" type="ethernet" network="2" node="1" interface="1" lport="0" rport="0" />
+      <connection id="5" type="ethernet" network="2" node="4" interface="0" lport="0" rport="0" />
+      <connection id="6" type="ethernet" network="3" node="1" interface="2" lport="0" rport="0" />
+      <connection id="7" type="ethernet" network="4" node="1" interface="3" lport="0" rport="0" />
+      <connection id="8" type="ethernet" network="5" node="1" interface="4" lport="0" rport="0" />
+      <connection id="9" type="ethernet" network="1" node="5" interface="0" lport="0" rport="0" />
+    </connections>
+  </topology>
+</lab>

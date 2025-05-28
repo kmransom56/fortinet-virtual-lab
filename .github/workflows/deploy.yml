@@ -1,0 +1,170 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    strategy:
+      matrix:
+        component: [ui, simulators/fortiswitch, simulators/fortiap, simulators/meraki]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Extract metadata for Docker
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ghcr.io/${{ github.repository_owner }}/fortinet-lab-${{ matrix.component == 'ui' && 'ui' || matrix.component == 'simulators/fortiswitch' && 'fortiswitch' || matrix.component == 'simulators/fortiap' && 'fortiap' || 'meraki' }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=tag
+          type=sha,format=short
+    
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: ${{ matrix.component }}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+
+  deploy-staging:
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+    
+    - name: Set Kubernetes context
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+    
+    - name: Deploy to Kubernetes
+      run: |
+        # Update image tags in Kubernetes manifests
+        TAG=$(echo $GITHUB_SHA | head -c7)
+        sed -i "s|ghcr.io/${{ github.repository_owner }}/fortinet-lab-ui:.*|ghcr.io/${{ github.repository_owner }}/fortinet-lab-ui:sha-$TAG|g" kubernetes/staging/*.yml
+        sed -i "s|ghcr.io/${{ github.repository_owner }}/fortinet-lab-fortiswitch:.*|ghcr.io/${{ github.repository_owner }}/fortinet-lab-fortiswitch:sha-$TAG|g" kubernetes/staging/*.yml
+        sed -i "s|ghcr.io/${{ github.repository_owner }}/fortinet-lab-fortiap:.*|ghcr.io/${{ github.repository_owner }}/fortinet-lab-fortiap:sha-$TAG|g" kubernetes/staging/*.yml
+        sed -i "s|ghcr.io/${{ github.repository_owner }}/fortinet-lab-meraki:.*|ghcr.io/${{ github.repository_owner }}/fortinet-lab-meraki:sha-$TAG|g" kubernetes/staging/*.yml
+        
+        # Apply the Kubernetes manifests
+        kubectl apply -f kubernetes/staging/
+        
+        # Wait for rollout to complete
+        kubectl rollout status deployment/fortinet-lab-ui -n fortinet-lab-staging
+        kubectl rollout status deployment/fortinet-lab-fortiswitch -n fortinet-lab-staging
+        kubectl rollout status deployment/fortinet-lab-fortiap -n fortinet-lab-staging
+        kubectl rollout status deployment/fortinet-lab-meraki -n fortinet-lab-staging
+
+  deploy-production:
+    needs: [build-and-push, deploy-staging]
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+    
+    - name: Set Kubernetes context
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+    
+    - name: Deploy to Kubernetes
+      run: |
+        # For tags, use the tag as the version
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/}
+        else
+          VERSION=sha-$(echo $GITHUB_SHA | head -c7)
+        fi
+        
+        # Update image tags in Kubernetes manifests
+        sed -i "s|ghcr.io/${{ github.repository_owner }}/fortinet-lab-ui:.*|ghcr.io/${{ github.repository_owner }}/fortinet-lab-ui:$VERSION|g" kubernetes/production/*.yml
+        sed -i "s|ghcr.io/${{ github.repository_owner }}/fortinet-lab-fortiswitch:.*|ghcr.io/${{ github.repository_owner }}/fortinet-lab-fortiswitch:$VERSION|g" kubernetes/production/*.yml
+        sed -i "s|ghcr.io/${{ github.repository_owner }}/fortinet-lab-fortiap:.*|ghcr.io/${{ github.repository_owner }}/fortinet-lab-fortiap:$VERSION|g" kubernetes/production/*.yml
+        sed -i "s|ghcr.io/${{ github.repository_owner }}/fortinet-lab-meraki:.*|ghcr.io/${{ github.repository_owner }}/fortinet-lab-meraki:$VERSION|g" kubernetes/production/*.yml
+        
+        # Apply the Kubernetes manifests
+        kubectl apply -f kubernetes/production/
+        
+        # Wait for rollout to complete
+        kubectl rollout status deployment/fortinet-lab-ui -n fortinet-lab-production
+        kubectl rollout status deployment/fortinet-lab-fortiswitch -n fortinet-lab-production
+        kubectl rollout status deployment/fortinet-lab-fortiap -n fortinet-lab-production
+        kubectl rollout status deployment/fortinet-lab-meraki -n fortinet-lab-production
+
+  create-release:
+    needs: deploy-production
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        if [ -z "$PREV_TAG" ]; then
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          echo "Initial release" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+        else
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          git log --pretty=format:"- %s" $PREV_TAG..HEAD >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+        fi
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        body: ${{ env.RELEASE_NOTES }}
+        generate_release_notes: true
+        files: |
+          README.md
+          docs/*
