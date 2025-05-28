@@ -1,222 +1,124 @@
 # Fortinet Virtual Lab Architecture
 
-This document outlines the architecture of the Fortinet Virtual Lab environment, designed to simulate network infrastructure for three restaurant brands: Arby's, Buffalo Wild Wings, and Sonic.
+## Overview
 
-## System Overview
+The Fortinet Virtual Lab is a comprehensive simulation environment designed to mirror a real-world network infrastructure for three restaurant brands: Arby's, Buffalo Wild Wings, and Sonic. This virtual lab enables testing, training, and development without requiring physical hardware.
 
-The virtual lab consists of several integrated components:
+## System Components
 
-1. **EVE-NG Professional** - Virtualization platform hosting Fortinet VMs
-2. **API Simulators** - Node.js applications simulating device APIs
-3. **Web Management UI** - React-based frontend for lab management
-4. **API Gateway** - Unified API access layer
-5. **Containerized Infrastructure** - Docker and Kubernetes deployment options
+### 1. EVE-NG Integration
 
-## Architecture Diagram
+- **EVE-NG Platform**: Hosts the virtual FortiGate appliances
+- **Brand-specific Topologies**:
+  - Arby's network (arbys.unl)
+  - Buffalo Wild Wings network (bww.unl)
+  - Sonic network (sonic.unl)
+- **FortiGate Virtual Machines**: One per brand, simulating the edge firewall
 
-```mermaid
-graph TD
-    User[User] -->|Accesses| WebUI[Web Management UI]
-    WebUI -->|API Calls| Gateway[API Gateway]
-    Gateway -->|Device API| FortiSwitch[FortiSwitch Simulator]
-    Gateway -->|Device API| FortiAP[FortiAP Simulator]
-    Gateway -->|Device API| Meraki[Meraki Simulator]
-    Gateway -->|VM Control| EVEConnector[EVE-NG Connector]
-    EVEConnector -->|API| EVENG[EVE-NG Professional]
-    
-    subgraph "Virtual Machines (EVE-NG)"
-        EVENG -->|Runs| FortiGate1[FortiGate - Arby's]
-        EVENG -->|Runs| FortiGate2[FortiGate - BWW]
-        EVENG -->|Runs| FortiGate3[FortiGate - Sonic]
-        EVENG -->|Runs| FMG1[FortiManager - Arby's]
-        EVENG -->|Runs| FMG2[FortiManager - BWW]
-        EVENG -->|Runs| FMG3[FortiManager - Sonic]
-        EVENG -->|Runs| FAZ[FortiAnalyzer - Shared]
-    end
-    
-    subgraph "Docker Containers"
-        WebUI
-        Gateway
-        FortiSwitch
-        FortiAP
-        Meraki
-        EVEConnector
-    end
-```
+### 2. Docker-based Simulators
 
-## Component Details
+- **FortiSwitch Simulator**: Emulates FortiSwitch devices with API endpoints
+- **FortiAP Simulator**: Emulates FortiAP wireless access points with API endpoints
+- **Meraki Simulator**: Emulates Cisco Meraki switches used in Arby's and Buffalo Wild Wings
+- **FortiManager Simulator**: Simulates FortiManager centralized management
+- **FortiAnalyzer Simulator**: Simulates FortiAnalyzer logging and analytics
 
-### 1. EVE-NG Professional
+### 3. Management Interface
 
-The core virtualization platform that hosts the Fortinet virtual machines:
-
-- **FortiGate Firewalls**: One per brand, providing security services
-- **FortiManager**: One per brand, for centralized management
-- **FortiAnalyzer**: Single shared instance for logging and reporting
-
-### 2. API Simulators
-
-Node.js applications that simulate the APIs of various network devices:
-
-- **FortiSwitch Simulator**: Simulates FortiSwitch devices for Sonic
-- **FortiAP Simulator**: Simulates FortiAP devices for all brands
-- **Meraki Simulator**: Simulates Meraki switches for Arby's and BWW
-
-Each simulator provides realistic API responses and maintains internal state.
-
-### 3. Web Management UI
-
-React-based web interface that provides:
-
-- Dashboard with lab status
-- One-click brand environment activation
-- Visual network topology maps
-- Configuration management
-
-### 4. API Gateway
-
-Centralizes access to all backend services:
-
-- Unified authentication
-- Request routing
-- Response caching
-- Error handling
-
-### 5. EVE-NG Connector
-
-Facilitates communication between the API Gateway and EVE-NG:
-
-- Controls VM lifecycle (start/stop)
-- Provisions configurations
-- Monitors VM status
+- **Web UI**: Central dashboard for controlling all lab components
+- **EVE-NG Proxy**: API bridge between the web UI and EVE-NG
 
 ## Network Topology
 
-Each brand has a unique network topology:
+### Arby's and Buffalo Wild Wings Topology
 
-### Arby's Network
-
-```mermaid
-graph TD
-    Internet((Internet)) --- FGT[FortiGate]
-    FGT --- Internal[Internal Network]
-    FGT --- DMZ[DMZ Network]
-    FGT --- WiFi[WiFi Network]
-    
-    Internal --- Meraki1[Meraki Switch 1]
-    Internal --- Meraki2[Meraki Switch 2]
-    
-    WiFi --- FAP1[FortiAP 1]
-    WiFi --- FAP2[FortiAP 2]
-    WiFi --- FAP3[FortiAP 3]
-    
-    FGT --- Management[Management Network]
-    Management --- FMG[FortiManager]
-    Management --- FAZ[FortiAnalyzer]
+```
+┌──────────────┐     ┌────────────┐
+│   FortiGate  │────▶│ FortiManager│
+└──────┬───────┘     └────────────┘
+       │                    ▲
+       ▼                    │
+┌──────────────┐     ┌────────────┐
+│ Meraki Switch │────▶│FortiAnalyzer│
+└──────┬───────┘     └────────────┘
+       │
+       ▼
+┌──────────────┐
+│   FortiAP    │
+└──────────────┘
 ```
 
-### Buffalo Wild Wings Network
+### Sonic Topology
 
-```mermaid
-graph TD
-    Internet((Internet)) --- FGT[FortiGate]
-    FGT --- Internal[Internal Network]
-    FGT --- DMZ[DMZ Network]
-    FGT --- WiFi[WiFi Network]
-    
-    Internal --- Meraki1[Meraki Switch 1]
-    Internal --- Meraki2[Meraki Switch 2]
-    
-    WiFi --- FAP1[FortiAP 1]
-    WiFi --- FAP2[FortiAP 2]
-    WiFi --- FAP3[FortiAP 3]
-    
-    FGT --- Management[Management Network]
-    Management --- FMG[FortiManager]
-    Management --- FAZ[FortiAnalyzer]
+```
+┌──────────────┐     ┌────────────┐
+│   FortiGate  │────▶│ FortiManager│
+└──────┬───────┘     └────────────┘
+       │                    ▲
+       ▼                    │
+┌──────────────┐     ┌────────────┐
+│ FortiSwitch  │────▶│FortiAnalyzer│
+└──────┬───────┘     └────────────┘
+       │
+       ▼
+┌──────────────┐
+│   FortiAP    │
+└──────────────┘
 ```
 
-### Sonic Network
+## Implementation Details
 
-```mermaid
-graph TD
-    Internet((Internet)) --- FGT[FortiGate]
-    FGT --- Internal[Internal Network]
-    FGT --- DMZ[DMZ Network]
-    FGT --- WiFi[WiFi Network]
-    
-    Internal --- FS1[FortiSwitch 1]
-    Internal --- FS2[FortiSwitch 2]
-    
-    WiFi --- FAP1[FortiAP 1]
-    WiFi --- FAP2[FortiAP 2]
-    WiFi --- FAP3[FortiAP 3]
-    
-    FGT --- Management[Management Network]
-    Management --- FMG[FortiManager]
-    Management --- FAZ[FortiAnalyzer]
-```
+### 1. Device Simulators
 
-## Deployment Options
+All device simulators are implemented as Node.js services that:
+- Expose REST APIs matching the actual device APIs
+- Maintain realistic state information
+- Respond to configuration changes
+- Store persistent data to simulate device memory
 
-The Fortinet Virtual Lab offers two deployment options:
+### 2. EVE-NG Integration
 
-### 1. Local Development with Docker Compose
+The lab uses EVE-NG to run actual FortiGate VM images, providing:
+- Realistic FortiOS experience
+- Full configuration capabilities
+- Network interface simulation
+- Virtual machine state persistence
 
-Ideal for individual use or testing, with all components running on a single host:
+### 3. Containerization
 
-```mermaid
-graph TD
-    DockerCompose[Docker Compose] --> UI[UI Container]
-    DockerCompose --> Gateway[API Gateway Container]
-    DockerCompose --> FortiSwitch[FortiSwitch Simulator Container]
-    DockerCompose --> FortiAP[FortiAP Simulator Container]
-    DockerCompose --> Meraki[Meraki Simulator Container]
-    DockerCompose --> EVEConnector[EVE-NG Connector Container]
-```
+The entire solution is containerized using Docker:
+- Each simulator runs in its own container
+- Docker Compose orchestrates the container ecosystem
+- Volume mounts ensure data persistence
+- Network configuration enables inter-container communication
 
-### 2. Production Deployment with Kubernetes
+## Getting Started
 
-Scalable deployment for multiple users, with high availability:
+### Prerequisites
 
-```mermaid
-graph TD
-    K8s[Kubernetes Cluster] --> UIDeploy[UI Deployment]
-    K8s --> GatewayDeploy[API Gateway Deployment]
-    K8s --> FortiSwitchDeploy[FortiSwitch Simulator Deployment]
-    K8s --> FortiAPDeploy[FortiAP Simulator Deployment]
-    K8s --> MerakiDeploy[Meraki Simulator Deployment]
-    K8s --> EVEConnectorDeploy[EVE-NG Connector Deployment]
-    
-    UIDeploy --> UIService[UI Service]
-    GatewayDeploy --> GatewayService[API Gateway Service]
-    FortiSwitchDeploy --> FortiSwitchService[FortiSwitch Service]
-    FortiAPDeploy --> FortiAPService[FortiAP Service]
-    MerakiDeploy --> MerakiService[Meraki Service]
-    EVEConnectorDeploy --> EVEConnectorService[EVE-NG Connector Service]
-    
-    UIService --> Ingress[Ingress Controller]
-    GatewayService --> Ingress
-    FortiSwitchService --> Ingress
-    FortiAPService --> Ingress
-    MerakiService --> Ingress
-    EVEConnectorService --> Ingress
-```
+- Docker and Docker Compose
+- Access to an EVE-NG instance with FortiGate VM images
+- Network connectivity to the EVE-NG server
 
-## Data Flow
+### Deployment
 
-1. User accesses the Web UI
-2. Web UI makes API calls to the API Gateway
-3. API Gateway routes requests to appropriate services:
-   - Device simulators for network device interactions
-   - EVE-NG connector for VM management
-4. EVE-NG connector communicates with EVE-NG to control VMs
-5. Fortinet VMs communicate with each other as per their configuration
+1. Clone the repository
+2. Copy `.env.example` to `.env` and configure your environment variables
+3. Run `./scripts/start-lab.sh` to launch the lab environment
+4. Access the web UI at http://localhost
 
 ## Security Considerations
 
-- All API communication uses HTTPS
-- Authentication required for all API access
-- Segmentation between different brand environments
-- Configuration data encrypted at rest
-- Secure access to EVE-NG platform
+- The lab is intended for internal use only
+- Default credentials are used for simplicity but should be changed in production
+- API keys and credentials are stored in the `.env` file
+- Communication between containers is not encrypted by default
+
+## Extension Points
+
+The virtual lab can be extended in several ways:
+
+1. **Additional Brands**: New brand topologies can be added to EVE-NG
+2. **More Device Types**: New device simulators can be added as Docker containers
+3. **Enhanced Scenarios**: Complex network scenarios can be configured
+4. **Integration with CI/CD**: Automated testing can be implemented using the lab APIs
